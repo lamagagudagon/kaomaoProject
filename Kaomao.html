@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>For You 💖</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <style>
+        body {
+            background-color: #FDF2F8;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            overflow: hidden;
+        }
+
+        .container {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(244, 114, 182, 0.2);
+            max-width: 500px;
+            width: 90%;
+            text-align: center;
+            max-height: 80vh;
+            overflow-y: auto;
+            line-height: 1.6;
+            color: #4B5563;
+        }
+
+        h2 { color: #DB2777; }
+        
+        input {
+            padding: 12px;
+            width: 80%;
+            border: 2px solid #FBCFE8;
+            border-radius: 10px;
+            font-size: 16px;
+            margin-bottom: 10px; /* ขยับนิดนึงให้มีที่วาง reaction */
+            text-align: center;
+            outline: none;
+        }
+        input:focus { border-color: #F472B6; }
+
+        button {
+            background-color: #F472B6;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 10px;
+            font-size: 16px;
+            cursor: pointer;
+            margin: 8px;
+            transition: background-color 0.3s, transform 0.2s; /* เอา transform ของปุ่มไม่! ออกจากการ transition หลัก */
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        button:hover { background-color: #DB2777; transform: translateY(-2px); }
+
+        img { max-width: 80%; border-radius: 15px; margin-bottom: 20px; }
+
+        /* เวทมนตร์แอนิเมชันตอนสลับหน้าของ Vue */
+        .fade-enter-active, .fade-leave-active { transition: opacity 0.5s ease, transform 0.5s ease; }
+        .fade-enter-from, .fade-leave-to { opacity: 0; transform: translateY(10px); }
+
+        /* ช่วยให้ข้อความยาวๆ เคารพการขึ้นบรรทัดใหม่ (\n) */
+        .typewriter-text { text-align: left; white-space: pre-wrap; min-height: 100px;}
+        
+        /* ข้อความอ่านใจ Real-time */
+        .reaction-text { color: #DB2777; font-size: 14px; min-height: 20px; margin-bottom: 15px;}
+        
+        /* ซ่อนก่อน Vue จะโหลดเสร็จ ป้องกันหน้าจอกะพริบ */
+        [v-cloak] { display: none; }
+    </style>
+</head>
+<body>
+
+    <div id="app" v-cloak>
+        <transition name="fade" mode="out-in">
+
+            <div v-if="currentPage === 'start'" class="container" key="start">
+                <h2>สวัสดีครับผ้มมมมม 💖</h2>
+                <p>ขอยาดเช็คชื่อนะค้าบบบ!</p>
+                <input type="text" v-model="nameInput" placeholder="พิมพ์ชื่อเล่นมาเบย😇" @keyup.enter="checkName">
+                <div class="reaction-text">{{ liveReaction }}</div>
+                <button @click="checkName">ตกลง</button>
+            </div>
+
+            <div v-else-if="currentPage === 'easter-egg'" class="container" key="easter">
+                <h2>{{ easterEggText }}</h2>
+                <button @click="resetPage">🔙 กลับไปใส่ชื่อใหม่เดี๋ยวนี้</button>
+            </div>
+
+            <div v-else-if="currentPage === 'menu'" class="container" key="menu">
+                <h2>สวัสดีครับผ้มมม ✨</h2>
+                <p>เลือกหัวข้อ list มาได้เบยยย🥰</p>
+                <button @click="showMessage('วันจบ')">1. วันปัจฉิมข้าวเม่า.</button><br>
+                <button @click="showMessage('กำลังใจ')">2. อันนี้เรื่องสอบ</button><br>
+                <button @click="showMessage('ขอโทษ')">3. คำขอโทษจากสวรรค์</button>
+            </div>
+
+            <div v-else-if="currentPage === 'message'" class="container" key="message">
+                <h2>{{ topicTitle }}</h2>
+                <p class="typewriter-text">{{ displayMessageText }}<span v-if="isTyping">|</span></p> 
+                <button v-if="!isTyping" @click="handleAfterMessage">ถ้าอ่านเสร็จแล้วกดตรงนี้เบยย👉</button>
+            </div>
+
+            <div v-else-if="currentPage === 'ask'" class="container" key="ask">
+                
+                <h2>เป็นเยี่ยงไรบ้าง 🥺</h2>
+                <button @click="currentPage = 'final'">ดีขึ้นดิโห่🤬</button>
+                <button :style="noBtnStyle" @mouseover="dodgeMouse($event)" @click="currentPage = 'troll'" style="position: relative; transition: transform 0.2s ease-out;">ไม่🤬!!</button>
+            </div>
+
+            <div v-else-if="currentPage === 'final'" class="container" key="final">
+                <h2>ดีมากครับผ้มมมม 💖</h2>
+                <img src="./photos/k1.JPG" alt="บักติ๋ม">
+                <p>ไม่คือแบบอันนี้พี่เคลองทำครั้งแรกแต่อยากจะบอกคือว่า ถ้าไม่พอใจอะไรตรงไหนที่เกี่ยวกับพี่เคบอกได้เลยนะครับ แม่งเอ้ยเขิน😖</p>
+                <button @click="currentPage='troll'">เสร็จละจ้าา</button>
+            </div>
+
+            <div v-else-if="currentPage === 'troll'" class="container" key="troll">
+                <h2>จะไปไหน ไม่ให้ไป😜</h2>
+                <img src="./photos/k2.heic" alt="พี่เคหล่อมาก">
+                <p>ถ้าโอเคหรือไม่โอเคบอกได้เลยนะครับผ้มม โคตรหล่อ่ะ ฮา ฮา ฮา </p>
+                <button @click="currentPage = 'menu'">หยอกเล่นๆครับขอโทษครับ พอแล้ว เลิกแล้ว ไม่เอาแล้ว</button>
+            </div>
+
+        </transition>
+    </div>
+
+    <script>
+        const { createApp } = Vue;
+
+        createApp({
+            data() {
+                return {
+                    currentPage: 'start', // หน้าปัจจุบันที่แสดงอยู่
+                    currentTopic: '',
+                    nameInput: '',
+                    liveReaction: '', // ข้อความแซว Real-time
+                    easterEggText: '',
+                    topicTitle: '',
+                    fullMessageText: '', // ข้อความเต็มๆ ที่รอพิมพ์
+                    displayMessageText: '', // ข้อความที่ค่อยๆ แสดงผล
+                    isTyping: false,
+                    currentX: 0,
+                    currentY: 0,
+                    typewriterTimer: null,
+                    noBtnStyle: { transform: 'translate(0px, 0px)' } // สไตล์ปุ่มหนี
+                }
+            },
+            // Watchers: เอาไว้จับตาดูตัวแปรแบบ Real-time
+            watch: {
+                nameInput(newValue) {
+                    let name = newValue.trim();
+                    if (name === "ข้าวเม่า") {
+                        this.liveReaction = "ชื่อนี้ถือว่าถูกต้อง ไม่งั้นมันจะไอนั่น";
+                    } else if (name === "ปอ" || name === "พี่ปอ") {
+                        this.liveReaction = "ปอเองหรอนี่";
+                    } else if (name === "มัดหมี่" || name === "พี่หมี่" || name === "หมี่"){
+                        this.liveReaction = "อี๋....";
+                    } else if (name.length > 0) {
+                        this.liveReaction = "ใครกันนั้าาาา";
+                    } else {
+                        this.liveReaction = "";
+                    }
+                }
+            },
+            methods: {
+                checkName() {
+                    let name = this.nameInput.trim();
+                    if (name === "ปอ" || name === "พี่ปอ") {
+                        this.easterEggText = "สวัสดีจ้าปอ";
+                        this.currentPage = 'easter-egg';
+                    } else if (name === "มัดหมี่" || name === "พี่หมี่" || name === "หมี่") {
+                        this.easterEggText = "อี่ อันนี้ฉันทำให้ข้าวเม่าค่าา!";
+                        this.currentPage = 'easter-egg';
+                    } else if (name === "ข้าวเม่า") {
+                        this.currentPage = 'menu';
+                    } else {
+                        alert("ใครเนี่ยเห้ย");
+                    }
+                },
+                showMessage(topic) {
+                    this.currentTopic = topic;
+                    if (topic === 'วันจบ') {
+                        this.topicTitle = "วันจบข้าวเม่า";
+                        // ใช้ \n เพื่อขึ้นบรรทัดใหม่ได้เลย
+                        this.fullMessageText = "ขอโทษที่พี่เคไม่ได้ไปวันจบนะครับบ\n\nคือพี่เคอยากไปถ่ายจริงๆแต่ติดตรงสันนั้นเรียน3ตัวติดกันแล้วแกสอบเก็บคะแนนด้วยไงคาบบ่าย นอยมากบอกตง🥲\nไว้ถ้ามีโอกาสเจอกันนอกรอบนะครับผ้มม ขอให้้ทันตแนข้าวเม่าปัจฉิมสาธุ🙏";
+                    } else if (topic === 'กำลังใจ') {
+                        this.topicTitle = "กำลังใจจากใครหนอ ขอเป็นทานให้ฝันให้ใฝ่ ให้ชีวิตได้มีแรงใจ ให้ดวงใจลุกโชนความหวัง✌️";
+                        this.fullMessageText = "สอบ A-Level ก็สู้ๆนะครับบบ🔥🔥🔥 ข้าวเม่าทำได้อยู่แล้วชิลลเลยยยย มั่นใจๆๆๆๆๆๆ\n\n และขอให้ได้เขามหาลัยที่ชอบ คณะที่ใช่นะครับบ🎊🥰";
+                    } else if (topic === 'ขอโทษ') {
+                        this.topicTitle = "ขอโทษรอบที่ล้านแปด🥺";
+                        this.fullMessageText = "คือพี่เครู้แหละว่าพี่เคขอโทษไปเยอะและบ่อยมากอาจจะดูไม่มีค่าแล้วก็\nได้แต่อยากให้อ่านอันนี้หน่อย แต่รอบนี้บอกให้เคลียร์ก่อนคือพี่เคอ่ะทำผิดกับข้าวเม่าเรื่องไม่ตอบแชทใช่ในสมัยนู้นนนนนอ่ะ แล้วทีนี้ตอนพี่เคปีหนึ่งที่ข้าวเม่าบอกว่าจะมาคุยกับพี่เค พี่เคอ่ะเข้าใจว่าแบบมาคุยปกติแบบพี่น้องเฉยๆไงง แต่แบบพี่เคก็แอบหวังเล็กๆนะว่าแบบจะมาคุยจริงจังรึป่าว(ตอนนั้นนะ) แล้วแบบมาพึ่งมารู้เลยว่าจรืงจังอ่ะคือ เมื่อต้นปี 2026 ที่ข้าวเม่าบอกว่ายังไม่ได้บอกพอแม่เลยว่ากลับมาคุยกับพี่เคเดี๋ยวแม่หาว่าวอกแวก \nพี่เคเลยแบบว่า(คิดในใจนะ) แบบว่าเอ้า ไม่ใช่ว่าเราคุยแบบพี่น้องหรอกหรอไรงี้ แล้วถ้าบอกแม่ไปก็ไม่น่าจะเห็นเป็นอะไรเลยหนิแล้ววแบบ พี่เคตอนนั้นแบบ เห้ยเอาดีหรือว่าจริงจังหรอ แล้วที่ผ่านมาคือพี่เคทำตัวเหมือนเดิมเลยย🥲 ทีนี้เลยไป ถาม+เล่า ให้พี่หมี่ พี่เจ พี่บิลลี่ฟัง(แบบว่าไม่ได้คิดไปเองใช้มั้ยว่าข้าวเม่าจริงจังหรืออะไรตอนนั้นสับสนกับตัวเองมาก นั่นแหละ พี่เคโง่เอง😞) ก็ตามนั้นแหละโดนด่าเต็มระเบียบ😔 โหละแบบแม่งเอ้ยยย มารู้และเกือบตั้งปีนึงเต็มๆอ่ะโห่ที่พี่เคทำตัวเหมือนเดิม";
+                    }
+                    this.currentPage = 'message';
+                    this.startTypewriter(); // เรียกฟังก์ชันพิมพ์ดีด
+                },
+                startTypewriter() {
+                    this.displayMessageText = "";
+                    this.isTyping = true;
+                    clearInterval(this.typewriterTimer);
+                    
+                    let i = 0;
+                    this.typewriterTimer = setInterval(() => {
+                        if (i < this.fullMessageText.length) {
+                            this.displayMessageText += this.fullMessageText.charAt(i);
+                            i++;
+                        } else {
+                            this.isTyping = false;
+                            clearInterval(this.typewriterTimer);
+                        }
+                    }, 20);
+                },
+                dodgeMouse(event) {
+                    // 1. หาพิกัดของปุ่มและเมาส์บนหน้าจอ
+                    const btn = event.target.getBoundingClientRect();
+                    const btnCenterX = btn.left + btn.width / 2;
+                    const btnCenterY = btn.top + btn.height / 2;
+                    const mouseX = event.clientX;
+                    const mouseY = event.clientY;
+
+                    // 2. คำนวณทิศทาง (เมาส์พุ่งมาทางไหน ให้หนีไปทิศตรงข้าม)
+                    let moveX = btnCenterX - mouseX;
+                    let moveY = btnCenterY - mouseY;
+
+                    // ดักไว้เผื่อเมาส์มาอยู่ตรงกลางเป๊ะๆ
+                    if (moveX === 0 && moveY === 0) {
+                        moveX = 1; moveY = 1;
+                    }
+
+                    // 3. กำหนดความแรงในการกระโดดหนี (หนีทีละ 80px)
+                    const distance = Math.sqrt(moveX * moveX + moveY * moveY);
+                    const jumpStrength = 80; 
+                    const pushX = (moveX / distance) * jumpStrength;
+                    const pushY = (moveY / distance) * jumpStrength;
+
+                    // 4. เอาค่าไปบวกเพิ่มจากตำแหน่งล่าสุด
+                    this.currentX += pushX;
+                    this.currentY += pushY;
+
+                    // 5. ลอจิกกันปุ่มวิ่งทะลุขอบจอ (ถ้าใกล้ขอบจอให้มันเด้งกลับนิดนึง)
+                    const limitX = window.innerWidth / 3; 
+                    const limitY = window.innerHeight / 3;
+
+                    if (this.currentX > limitX) this.currentX = limitX - 50;
+                    if (this.currentX < -limitX) this.currentX = -limitX + 50;
+                    if (this.currentY > limitY) this.currentY = limitY - 50;
+                    if (this.currentY < -limitY) this.currentY = -limitY + 50;
+
+                    // 6. สั่งปุ่มขยับเลยยย!
+                    this.noBtnStyle = { transform: `translate(${this.currentX}px, ${this.currentY}px)` };
+                },
+
+                handleAfterMessage() {
+                    // ถ้าเป็นหัวข้อที่ 3 (ขอโทษ) ให้ไปหน้าถามความรู้สึก
+                    if (this.currentTopic === 'ขอโทษ') {
+                        this.currentPage = 'ask';
+                    } 
+                    // แต่ถ้าเป็นข้อ 1 หรือ 2 ให้อ่านจบแล้วเด้งกลับไปหน้าเมนู
+                    else {
+                        this.currentPage = 'menu'; 
+                    }
+                },
+                resetPage() {
+                    this.nameInput = "";
+                    this.liveReaction = "";
+                    this.noBtnStyle = { transform: 'translate(0px, 0px)' };
+                    this.currentPage = 'start';
+                }
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>
